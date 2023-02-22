@@ -10,6 +10,7 @@ import time
 
 class Timer(object):
     """A simple timer."""
+
     def __init__(self):
         self.total_time = 0.
         self.calls = 0
@@ -18,7 +19,7 @@ class Timer(object):
         self.average_time = 0.
 
     def tic(self):
-        # using time.time instead of time.clock because time time.clock
+        # using time.time instead of time.clock because time.clock
         # does not normalize for multithreading
         self.start_time = time.time()
 
