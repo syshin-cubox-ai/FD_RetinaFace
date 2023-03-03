@@ -8,6 +8,7 @@ import onnxruntime.tools.symbolic_shape_infer
 import onnxsim
 import torch
 import torch.nn as nn
+import torch.utils.model_zoo
 import torchvision
 
 from data import cfg_re50
@@ -20,7 +21,10 @@ class RetinaFaceWrapper(nn.Module):
     def __init__(self, img_size: int):
         super().__init__()
         self.model = RetinaFace(cfg=cfg_re50, phase='test').eval()
-        self.model.load_state_dict(torch.load('weights/Resnet50_Final.pth'))
+        state_dict = torch.utils.model_zoo.load_url(
+            'https://github.com/syshin-cubox-ai/FD_RetinaFace/releases/download/v0.0.1-weights/Resnet50_Final.pth'
+        )
+        self.model.load_state_dict(state_dict)
 
         self.prior_box = priorbox(
             min_sizes=[[16, 32], [64, 128], [256, 512]],
