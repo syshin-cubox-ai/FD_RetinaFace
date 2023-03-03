@@ -216,16 +216,10 @@ def decode(
     Return:
         decoded bounding box predictions
     """
-    boxes = torch.cat(
-        (
-            priors[:, :2] + loc[:, :2] * variances[0] * priors[:, 2:],
-            priors[:, 2:] * torch.exp(loc[:, 2:] * variances[1]),
-        ),
-        1,
-    )
-    boxes[:, :2] -= boxes[:, 2:] / 2
-    boxes[:, 2:] += boxes[:, :2]
-    return boxes
+    xy = priors[:, :2] + loc[:, :2] * variances[0] * priors[:, 2:]
+    wh = priors[:, 2:] * torch.exp(loc[:, 2:] * variances[1])
+    x1y1x2y2 = torch.cat((xy - wh / 2, xy + wh / 2), 1)
+    return x1y1x2y2
 
 
 def decode_landm(

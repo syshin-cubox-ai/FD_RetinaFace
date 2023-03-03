@@ -11,54 +11,59 @@ import torch.nn as nn
 import torch.utils.model_zoo
 import torchvision
 
-from data import cfg_re50
+from data import cfg_re50, cfg_mnet
 from layers.functions.prior_box import priorbox
 from models.retinaface import RetinaFace
 from utils.box_utils import decode, decode_landm
 
 
 class RetinaFaceWrapper(nn.Module):
-    def __init__(self, img_size: int):
+    def __init__(self, cfg: dict, img_size: int):
         super().__init__()
-        self.model = RetinaFace(cfg=cfg_re50, phase='test').eval()
-        state_dict = torch.utils.model_zoo.load_url(
-            'https://github.com/syshin-cubox-ai/FD_RetinaFace/releases/download/v0.0.1-weights/Resnet50_Final.pth'
-        )
-        self.model.load_state_dict(state_dict)
+        self.cfg = cfg
+        match self.cfg['name']:
+            case 'Resnet50':
+                state_dict = torch.utils.model_zoo.load_url(
+                    'https://github.com/syshin-cubox-ai/FD_RetinaFace/releases/'
+                    'download/v0.0.1-weights/Resnet50_Final.pth'
+                )
+            case 'mobilenet0.25':
+                state_dict = torch.load('weights/mobilenet0.25_Final.pth')
+            case _:
+                raise ValueError('Wrong cfg')
 
-        self.prior_box = priorbox(
-            min_sizes=[[16, 32], [64, 128], [256, 512]],
-            steps=[8, 16, 32],
+        self.model = RetinaFace(self.cfg, phase='test')
+        self.model.load_state_dict(state_dict)
+        self.priors = priorbox(
+            min_sizes=self.cfg['min_sizes'],
+            steps=self.cfg['steps'],
             clip=False,
             image_size=(img_size, img_size),
         )
-        self.variance = [0.1, 0.2]
-        self.scale_bboxes = torch.tile(torch.tensor((img_size, img_size)), (2,))
-        self.scale_landmarks = torch.tile(torch.tensor((img_size, img_size)), (5,))
-
-        self.confidence_threshold = 0.6
-        self.nms_threshold = 0.4
+        self.scale = img_size
+        self.conf_thres = 0.9
+        self.iou_thres = 0.5
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         loc, conf, landm = self.model(x)
         loc, conf, landm = loc.squeeze(0), conf.squeeze(0), landm.squeeze(0)
 
         # Decode
-        boxes = decode(loc, self.prior_box, self.variance)
-        boxes *= self.scale_bboxes
+        boxes = decode(loc, self.priors, self.cfg['variance'])
+        boxes = boxes * self.scale
         scores = conf[:, 1]
-        landmarks = decode_landm(landm, self.prior_box, self.variance)
-        landmarks *= self.scale_landmarks
+        landmarks = decode_landm(landm, self.priors, self.cfg['variance'])
+        landmarks = landmarks * self.scale
 
         # Ignore low scores
-        keep = torch.nonzero(scores > self.confidence_threshold).squeeze(1)
+        keep = torch.nonzero(scores > self.conf_thres).squeeze(1)
         boxes = boxes[keep]
         scores = scores[keep]
         landmarks = landmarks[keep]
 
         # NMS
-        keep = torchvision.ops.nms(boxes, scores, self.nms_threshold)
-        boxes = boxes[keep, :]
+        keep = torchvision.ops.nms(boxes, scores, self.iou_thres)
+        boxes = boxes[keep]
         scores = scores[keep]
         landmarks = landmarks[keep]
 
@@ -70,7 +75,7 @@ def convert_onnx(model, img, output_path, opset=17, dynamic=False, simplify=True
     assert isinstance(model, torch.nn.Module)
 
     model.eval()
-    print("\n[in progress] torch.onnx.export...")
+    print("[in progress] torch.onnx.export...")
 
     # Define input and output names
     input_names = ['image']
@@ -134,6 +139,7 @@ if __name__ == '__main__':
     img = img.transpose(2, 0, 1)
     img = torch.from_numpy(img).unsqueeze(0)
 
-    model = RetinaFaceWrapper(img.shape[2])
+    model = RetinaFaceWrapper(cfg_re50, img.shape[2])
+    # model = RetinaFaceWrapper(cfg_mnet, img.shape[2])
 
-    convert_onnx(model, img, 'onnx_files/retinaface-resnet50.onnx')
+    convert_onnx(model, img, 'onnx_files/retinaface.onnx')

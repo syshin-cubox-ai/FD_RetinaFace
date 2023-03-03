@@ -21,7 +21,7 @@ def priorbox(min_sizes: List[List[int]], steps: List[int], clip: bool, image_siz
                     anchors += [cx, cy, s_kx, s_ky]
 
     # back to torch land
-    output = torch.Tensor(anchors).view(-1, 4)
+    output = torch.tensor(anchors).view(-1, 4)
     if clip:
         output.clamp_(max=1, min=0)
     return output
