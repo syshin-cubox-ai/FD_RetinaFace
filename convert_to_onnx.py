@@ -72,7 +72,7 @@ def convert_onnx(
     model: nn.Module,
     img: Tensor,
     output_path: str,
-    opset=18,
+    opset=20,
     dynamic=False,
 ):
     model.eval()
@@ -96,7 +96,7 @@ def convert_onnx(
         input_names=input_names,
         output_names=output_names,
         opset_version=opset,
-        dynamo=True,
+        dynamo=False,
         external_data=False,
         dynamic_axes=dynamic_axes,
     )
@@ -107,7 +107,7 @@ def convert_onnx(
     # Compare output with torch model and ONNX model
     torch_out = model(img).detach().numpy()
     session = onnxruntime.InferenceSession(
-        output_path, providers=["CPUExecutionProvider"]
+        output_path, providers=["CUDAExecutionProvider"]
     )
     onnx_out = session.run(None, {input_names[0]: img.numpy()})[0]
     try:
