@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from data import cfg_mnet
-from utils.box_utils import match, log_sum_exp
+from utils.box_utils import log_sum_exp, match
 
-GPU = cfg_mnet['gpu_train']
+GPU = cfg_mnet["gpu_train"]
 
 
 class MultiBoxLoss(nn.Module):
@@ -32,15 +32,15 @@ class MultiBoxLoss(nn.Module):
     """
 
     def __init__(
-            self,
-            num_classes: int,
-            overlap_thresh: float,
-            prior_for_matching: bool,
-            bkg_label: int,
-            neg_mining: bool,
-            neg_pos: int,
-            neg_overlap: float,
-            encode_target: bool,
+        self,
+        num_classes: int,
+        overlap_thresh: float,
+        prior_for_matching: bool,
+        bkg_label: int,
+        neg_mining: bool,
+        neg_pos: int,
+        neg_overlap: float,
+        encode_target: bool,
     ) -> None:
         super().__init__()
         self.num_classes = num_classes
@@ -70,7 +70,7 @@ class MultiBoxLoss(nn.Module):
         loc_data, conf_data, landm_data = predictions
         priors = priors
         num = loc_data.size(0)
-        num_priors = (priors.size(0))
+        num_priors = priors.size(0)
 
         # match priors (default boxes) and ground truth boxes
         loc_t = torch.Tensor(num, num_priors, 4)
@@ -81,7 +81,18 @@ class MultiBoxLoss(nn.Module):
             labels = targets[idx][:, -1].data
             landms = targets[idx][:, 4:14].data
             defaults = priors.data
-            match(self.threshold, truths, defaults, self.variance, labels, landms, loc_t, conf_t, landm_t, idx)
+            match(
+                self.threshold,
+                truths,
+                defaults,
+                self.variance,
+                labels,
+                landms,
+                loc_t,
+                conf_t,
+                landm_t,
+                idx,
+            )
         if GPU:
             loc_t = loc_t.cuda()
             conf_t = conf_t.cuda()
@@ -96,7 +107,7 @@ class MultiBoxLoss(nn.Module):
         pos_idx1 = pos1.unsqueeze(pos1.dim()).expand_as(landm_data)
         landm_p = landm_data[pos_idx1].view(-1, 10)
         landm_t = landm_t[pos_idx1].view(-1, 10)
-        loss_landm = F.smooth_l1_loss(landm_p, landm_t, reduction='sum')
+        loss_landm = F.smooth_l1_loss(landm_p, landm_t, reduction="sum")
 
         pos = conf_t != zeros
         conf_t[pos] = 1
@@ -106,7 +117,7 @@ class MultiBoxLoss(nn.Module):
         pos_idx = pos.unsqueeze(pos.dim()).expand_as(loc_data)
         loc_p = loc_data[pos_idx].view(-1, 4)
         loc_t = loc_t[pos_idx].view(-1, 4)
-        loss_l = F.smooth_l1_loss(loc_p, loc_t, reduction='sum')
+        loss_l = F.smooth_l1_loss(loc_p, loc_t, reduction="sum")
 
         # Compute max conf across batch for hard negative mining
         batch_conf = conf_data.view(-1, self.num_classes)
@@ -126,7 +137,7 @@ class MultiBoxLoss(nn.Module):
         neg_idx = neg.unsqueeze(2).expand_as(conf_data)
         conf_p = conf_data[(pos_idx + neg_idx).gt(0)].view(-1, self.num_classes)
         targets_weighted = conf_t[(pos + neg).gt(0)]
-        loss_c = F.cross_entropy(conf_p, targets_weighted, reduction='sum')
+        loss_c = F.cross_entropy(conf_p, targets_weighted, reduction="sum")
 
         # Sum of losses: L(x,c,l,g) = (Lconf(x, c) + αLloc(x,l,g)) / N
         N = max(num_pos.data.sum().float(), 1)

@@ -14,7 +14,9 @@ def point_form(boxes: torch.Tensor) -> torch.Tensor:
     Return:
         boxes: Converted x_min, y_min, x_max, y_max form of boxes.
     """
-    return torch.cat((boxes[:, :2] - boxes[:, 2:] / 2, boxes[:, :2] + boxes[:, 2:] / 2), dim=1)
+    return torch.cat(
+        (boxes[:, :2] - boxes[:, 2:] / 2, boxes[:, :2] + boxes[:, 2:] / 2), dim=1
+    )
 
 
 def center_size(boxes: torch.Tensor) -> torch.Tensor:
@@ -25,7 +27,9 @@ def center_size(boxes: torch.Tensor) -> torch.Tensor:
     Return:
         boxes: Converted x_min, y_min, x_max, y_max form of boxes.
     """
-    return torch.cat(((boxes[:, 2:] + boxes[:, :2]) / 2, boxes[:, 2:] - boxes[:, :2]), dim=1)
+    return torch.cat(
+        ((boxes[:, 2:] + boxes[:, :2]) / 2, boxes[:, 2:] - boxes[:, :2]), dim=1
+    )
 
 
 def intersect(box_a: torch.Tensor, box_b: torch.Tensor) -> torch.Tensor:
@@ -42,8 +46,14 @@ def intersect(box_a: torch.Tensor, box_b: torch.Tensor) -> torch.Tensor:
     """
     a = box_a.size(0)
     b = box_b.size(0)
-    max_xy = torch.min(box_a[:, 2:].unsqueeze(1).expand(a, b, 2), box_b[:, 2:].unsqueeze(0).expand(a, b, 2))
-    min_xy = torch.max(box_a[:, :2].unsqueeze(1).expand(a, b, 2), box_b[:, :2].unsqueeze(0).expand(a, b, 2))
+    max_xy = torch.min(
+        box_a[:, 2:].unsqueeze(1).expand(a, b, 2),
+        box_b[:, 2:].unsqueeze(0).expand(a, b, 2),
+    )
+    min_xy = torch.max(
+        box_a[:, :2].unsqueeze(1).expand(a, b, 2),
+        box_b[:, :2].unsqueeze(0).expand(a, b, 2),
+    )
     inter = torch.clamp((max_xy - min_xy), min=0)
     return inter[:, :, 0] * inter[:, :, 1]
 
@@ -62,8 +72,16 @@ def jaccard(box_a: torch.Tensor, box_b: torch.Tensor) -> torch.Tensor:
         jaccard overlap: Shape: [box_a.size(0), box_b.size(0)]
     """
     inter = intersect(box_a, box_b)
-    area_a = ((box_a[:, 2] - box_a[:, 0]) * (box_a[:, 3] - box_a[:, 1])).unsqueeze(1).expand_as(inter)  # [A,B]
-    area_b = ((box_b[:, 2] - box_b[:, 0]) * (box_b[:, 3] - box_b[:, 1])).unsqueeze(0).expand_as(inter)  # [A,B]
+    area_a = (
+        ((box_a[:, 2] - box_a[:, 0]) * (box_a[:, 3] - box_a[:, 1]))
+        .unsqueeze(1)
+        .expand_as(inter)
+    )  # [A,B]
+    area_b = (
+        ((box_b[:, 2] - box_b[:, 0]) * (box_b[:, 3] - box_b[:, 1]))
+        .unsqueeze(0)
+        .expand_as(inter)
+    )  # [A,B]
     union = area_a + area_b - inter
     return inter / union
 
@@ -79,16 +97,16 @@ def matrix_iof(a: np.ndarray, b: np.ndarray) -> np.ndarray:
 
 
 def match(
-        threshold: float,
-        box_gt: torch.Tensor,
-        priors: torch.Tensor,
-        variances: List[float],
-        labels_gt: torch.Tensor,
-        landmarks_gt: torch.Tensor,
-        box_t: torch.Tensor,
-        label_t: torch.Tensor,
-        landmarks_t: torch.Tensor,
-        batch_id: int,
+    threshold: float,
+    box_gt: torch.Tensor,
+    priors: torch.Tensor,
+    variances: List[float],
+    labels_gt: torch.Tensor,
+    landmarks_gt: torch.Tensor,
+    box_t: torch.Tensor,
+    label_t: torch.Tensor,
+    landmarks_t: torch.Tensor,
+    batch_id: int,
 ) -> None:
     """Match each prior box with the ground truth box of the highest jaccard overlap.
 
@@ -148,7 +166,9 @@ def match(
     landmarks_t[batch_id] = landmarks_gt
 
 
-def encode(matched: torch.Tensor, priors: torch.Tensor, variances: List[float]) -> torch.Tensor:
+def encode(
+    matched: torch.Tensor, priors: torch.Tensor, variances: List[float]
+) -> torch.Tensor:
     """Encodes the variances from the priorbox layers into the ground truth boxes we have matched.
 
      (based on jaccard overlap) with the prior boxes.
@@ -173,7 +193,9 @@ def encode(matched: torch.Tensor, priors: torch.Tensor, variances: List[float]) 
 
 
 def encode_landm(
-        matched: torch.Tensor, priors: torch.Tensor, variances: Union[List[float], Tuple[float, float]]
+    matched: torch.Tensor,
+    priors: torch.Tensor,
+    variances: Union[List[float], Tuple[float, float]],
 ) -> torch.Tensor:
     """Encodes the variances from the priorbox layers into the ground truth boxes we have matched.
 
@@ -203,7 +225,9 @@ def encode_landm(
 
 # Adapted from https://github.com/Hakuyume/chainer-ssd
 def decode(
-        loc: torch.Tensor, priors: torch.Tensor, variances: Union[List[float], Tuple[float, float]]
+    loc: torch.Tensor,
+    priors: torch.Tensor,
+    variances: Union[List[float], Tuple[float, float]],
 ) -> torch.Tensor:
     """Decodes locations from predictions using priors to undo the encoding we did for offset regression at train time.
 
@@ -223,7 +247,9 @@ def decode(
 
 
 def decode_landm(
-        pre: torch.Tensor, priors: torch.Tensor, variances: Union[List[float], Tuple[float, float]]
+    pre: torch.Tensor,
+    priors: torch.Tensor,
+    variances: Union[List[float], Tuple[float, float]],
 ) -> torch.Tensor:
     """Decodes landmarks from predictions using priors to undo the encoding we did for offset regression at train time.
 

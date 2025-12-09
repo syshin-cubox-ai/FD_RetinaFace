@@ -3,7 +3,7 @@ import os
 
 import cv2
 import numpy as np
-import torch.utils.model_zoo
+import torch
 
 from data import cfg_mnet, cfg_re50
 from layers.functions.prior_box import PriorBox
@@ -12,23 +12,45 @@ from utils.box_utils import decode, decode_landm
 from utils.nms.py_cpu_nms import py_cpu_nms
 from utils.timer import Timer
 
-parser = argparse.ArgumentParser(description='Retinaface')
-parser.add_argument('-m', '--trained_model', default='./weights/mobilenet0.25_Final.pth',
-                    help='Trained state_dict file path to open')
-parser.add_argument('--network', default='mobile0.25', help='Backbone network mobile0.25 or resnet50')
-parser.add_argument('--save_folder', default='eval/', type=str, help='Dir to save results')
-parser.add_argument('--cpu', action="store_true", default=False, help='Use cpu inference')
-parser.add_argument('--dataset', default='FDDB', type=str, choices=['FDDB'], help='dataset')
-parser.add_argument('--confidence_threshold', default=0.02, type=float, help='confidence_threshold')
-parser.add_argument('--top_k', default=5000, type=int, help='top_k')
-parser.add_argument('--nms_threshold', default=0.4, type=float, help='nms_threshold')
-parser.add_argument('--keep_top_k', default=750, type=int, help='keep_top_k')
-parser.add_argument('-s', '--save_image', action="store_true", default=False, help='show detection results')
-parser.add_argument('--vis_thres', default=0.5, type=float, help='visualization_threshold')
+parser = argparse.ArgumentParser(description="Retinaface")
+parser.add_argument(
+    "-m",
+    "--trained_model",
+    default="./weights/mobilenet0.25_Final.pth",
+    help="Trained state_dict file path to open",
+)
+parser.add_argument(
+    "--network", default="mobile0.25", help="Backbone network mobile0.25 or resnet50"
+)
+parser.add_argument(
+    "--save_folder", default="eval/", type=str, help="Dir to save results"
+)
+parser.add_argument(
+    "--cpu", action="store_true", default=False, help="Use cpu inference"
+)
+parser.add_argument(
+    "--dataset", default="FDDB", type=str, choices=["FDDB"], help="dataset"
+)
+parser.add_argument(
+    "--confidence_threshold", default=0.02, type=float, help="confidence_threshold"
+)
+parser.add_argument("--top_k", default=5000, type=int, help="top_k")
+parser.add_argument("--nms_threshold", default=0.4, type=float, help="nms_threshold")
+parser.add_argument("--keep_top_k", default=750, type=int, help="keep_top_k")
+parser.add_argument(
+    "-s",
+    "--save_image",
+    action="store_true",
+    default=False,
+    help="show detection results",
+)
+parser.add_argument(
+    "--vis_thres", default=0.5, type=float, help="visualization_threshold"
+)
 args = parser.parse_args()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     torch.set_grad_enabled(False)
     cfg = None
     if args.network == "mobile0.25":
@@ -36,13 +58,13 @@ if __name__ == '__main__':
     elif args.network == "resnet50":
         cfg = cfg_re50
     # net and model
-    net = RetinaFace(cfg=cfg, phase='test')
-    state_dict = torch.utils.model_zoo.load_url(
-        'https://github.com/syshin-cubox-ai/FD_RetinaFace/releases/download/v0.0.1-weights/Resnet50_Final.pth'
+    net = RetinaFace(cfg=cfg, phase="test")
+    state_dict = torch.hub.load_state_dict_from_url(
+        "https://github.com/syshin-cubox-ai/FD_RetinaFace/releases/download/v0.0.1-weights/Resnet50_Final.pth"
     )
     net.load_state_dict(state_dict)
     net.eval()
-    print('Finished loading model!')
+    print("Finished loading model!")
     print(net)
     device = torch.device("cpu" if args.cpu else "cuda")
     net = net.to(device)
@@ -50,28 +72,30 @@ if __name__ == '__main__':
     # save file
     if not os.path.exists(args.save_folder):
         os.makedirs(args.save_folder)
-    fw = open(os.path.join(args.save_folder, args.dataset + '_dets.txt'), 'w')
+    fw = open(os.path.join(args.save_folder, args.dataset + "_dets.txt"), "w")
 
     # testing dataset
-    testset_folder = os.path.join('data', args.dataset, 'images/')
-    testset_list = os.path.join('data', args.dataset, 'img_list.txt')
-    with open(testset_list, 'r') as fr:
+    testset_folder = os.path.join("data", args.dataset, "images/")
+    testset_list = os.path.join("data", args.dataset, "img_list.txt")
+    with open(testset_list, "r") as fr:
         test_dataset = fr.read().split()
     num_images = len(test_dataset)
 
     # testing scale
     resize = 1
 
-    _t = {'forward_pass': Timer(), 'misc': Timer()}
+    _t = {"forward_pass": Timer(), "misc": Timer()}
 
     # testing begin
     for i, img_name in enumerate(test_dataset):
-        image_path = testset_folder + img_name + '.jpg'
+        image_path = testset_folder + img_name + ".jpg"
         img_raw = cv2.imread(image_path, cv2.IMREAD_COLOR)
 
         img = np.float32(img_raw)
         if resize != 1:
-            img = cv2.resize(img, None, None, fx=resize, fy=resize, interpolation=cv2.INTER_LINEAR)
+            img = cv2.resize(
+                img, None, None, fx=resize, fy=resize, interpolation=cv2.INTER_LINEAR
+            )
         im_height, im_width, _ = img.shape
         scale = torch.Tensor([img.shape[1], img.shape[0], img.shape[1], img.shape[0]])
         img -= (104, 117, 123)
@@ -80,22 +104,33 @@ if __name__ == '__main__':
         img = img.to(device)
         scale = scale.to(device)
 
-        _t['forward_pass'].tic()
+        _t["forward_pass"].tic()
         loc, conf, landms = net(img)  # forward pass
-        _t['forward_pass'].toc()
-        _t['misc'].tic()
+        _t["forward_pass"].toc()
+        _t["misc"].tic()
         priorbox = PriorBox(cfg, image_size=(im_height, im_width))
         priors = priorbox.forward()
         priors = priors.to(device)
         prior_data = priors.data
-        boxes = decode(loc.data.squeeze(0), prior_data, cfg['variance'])
+        boxes = decode(loc.data.squeeze(0), prior_data, cfg["variance"])
         boxes = boxes * scale / resize
         boxes = boxes.cpu().numpy()
         scores = conf.squeeze(0).data.cpu().numpy()[:, 1]
-        landms = decode_landm(landms.data.squeeze(0), prior_data, cfg['variance'])
-        scale1 = torch.Tensor([img.shape[3], img.shape[2], img.shape[3], img.shape[2],
-                               img.shape[3], img.shape[2], img.shape[3], img.shape[2],
-                               img.shape[3], img.shape[2]])
+        landms = decode_landm(landms.data.squeeze(0), prior_data, cfg["variance"])
+        scale1 = torch.Tensor(
+            [
+                img.shape[3],
+                img.shape[2],
+                img.shape[3],
+                img.shape[2],
+                img.shape[3],
+                img.shape[2],
+                img.shape[3],
+                img.shape[2],
+                img.shape[3],
+                img.shape[2],
+            ]
+        )
         scale1 = scale1.to(device)
         landms = landms * scale1 / resize
         landms = landms.cpu().numpy()
@@ -125,12 +160,12 @@ if __name__ == '__main__':
         # landms = landms[:args.keep_top_k, :]
 
         dets = np.concatenate((dets, landms), axis=1)
-        _t['misc'].toc()
+        _t["misc"].toc()
 
         # save dets
         if args.dataset == "FDDB":
-            fw.write('{:s}\n'.format(img_name))
-            fw.write('{:.1f}\n'.format(dets.shape[0]))
+            fw.write("{:s}\n".format(img_name))
+            fw.write("{:.1f}\n".format(dets.shape[0]))
             for k in range(dets.shape[0]):
                 xmin = dets[k, 0]
                 ymin = dets[k, 1]
@@ -140,10 +175,19 @@ if __name__ == '__main__':
                 w = xmax - xmin + 1
                 h = ymax - ymin + 1
                 # fw.write('{:.3f} {:.3f} {:.3f} {:.3f} {:.10f}\n'.format(xmin, ymin, w, h, score))
-                fw.write('{:d} {:d} {:d} {:d} {:.10f}\n'.format(int(xmin), int(ymin), int(w), int(h), score))
-        print('im_detect: {:d}/{:d} forward_pass_time: {:.4f}s misc: {:.4f}s'.format(i + 1, num_images,
-                                                                                     _t['forward_pass'].average_time,
-                                                                                     _t['misc'].average_time))
+                fw.write(
+                    "{:d} {:d} {:d} {:d} {:.10f}\n".format(
+                        int(xmin), int(ymin), int(w), int(h), score
+                    )
+                )
+        print(
+            "im_detect: {:d}/{:d} forward_pass_time: {:.4f}s misc: {:.4f}s".format(
+                i + 1,
+                num_images,
+                _t["forward_pass"].average_time,
+                _t["misc"].average_time,
+            )
+        )
 
         # show image
         if args.save_image:
@@ -155,8 +199,14 @@ if __name__ == '__main__':
                 cv2.rectangle(img_raw, (b[0], b[1]), (b[2], b[3]), (0, 0, 255), 2)
                 cx = b[0]
                 cy = b[1] + 12
-                cv2.putText(img_raw, text, (cx, cy),
-                            cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255))
+                cv2.putText(
+                    img_raw,
+                    text,
+                    (cx, cy),
+                    cv2.FONT_HERSHEY_DUPLEX,
+                    0.5,
+                    (255, 255, 255),
+                )
 
                 # landms
                 cv2.circle(img_raw, (b[5], b[6]), 1, (0, 0, 255), 4)

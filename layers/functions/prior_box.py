@@ -5,8 +5,15 @@ from typing import List, Tuple
 import torch
 
 
-def priorbox(min_sizes: List[List[int]], steps: List[int], clip: bool, image_size: Tuple[int, int]) -> torch.Tensor:
-    feature_maps = [[ceil(image_size[0] / step), ceil(image_size[1] / step)] for step in steps]
+def priorbox(
+    min_sizes: List[List[int]],
+    steps: List[int],
+    clip: bool,
+    image_size: Tuple[int, int],
+) -> torch.Tensor:
+    feature_maps = [
+        [ceil(image_size[0] / step), ceil(image_size[1] / step)] for step in steps
+    ]
 
     anchors: List[float] = []
     for k, f in enumerate(feature_maps):
@@ -30,12 +37,14 @@ def priorbox(min_sizes: List[List[int]], steps: List[int], clip: bool, image_siz
 class PriorBox(object):
     def __init__(self, cfg, image_size=None):
         super(PriorBox, self).__init__()
-        self.min_sizes = cfg['min_sizes']
-        self.steps = cfg['steps']
-        self.clip = cfg['clip']
+        self.min_sizes = cfg["min_sizes"]
+        self.steps = cfg["steps"]
+        self.clip = cfg["clip"]
         self.image_size = image_size
-        self.feature_maps = [[ceil(self.image_size[0] / step), ceil(self.image_size[1] / step)]
-                             for step in self.steps]
+        self.feature_maps = [
+            [ceil(self.image_size[0] / step), ceil(self.image_size[1] / step)]
+            for step in self.steps
+        ]
         self.name = "s"
 
     def forward(self):
@@ -46,8 +55,12 @@ class PriorBox(object):
                 for min_size in min_sizes:
                     s_kx = min_size / self.image_size[1]
                     s_ky = min_size / self.image_size[0]
-                    dense_cx = [x * self.steps[k] / self.image_size[1] for x in [j + 0.5]]
-                    dense_cy = [y * self.steps[k] / self.image_size[0] for y in [i + 0.5]]
+                    dense_cx = [
+                        x * self.steps[k] / self.image_size[1] for x in [j + 0.5]
+                    ]
+                    dense_cy = [
+                        y * self.steps[k] / self.image_size[0] for y in [i + 0.5]
+                    ]
                     for cy, cx in product(dense_cy, dense_cx):
                         anchors += [cx, cy, s_kx, s_ky]
 
