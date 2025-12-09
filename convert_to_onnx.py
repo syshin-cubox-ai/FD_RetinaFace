@@ -72,7 +72,6 @@ def convert_onnx(
     model: nn.Module,
     img: Tensor,
     output_path: str,
-    opset=20,
     dynamic=False,
 ):
     model.eval()
@@ -95,7 +94,7 @@ def convert_onnx(
         output_path,
         input_names=input_names,
         output_names=output_names,
-        opset_version=opset,
+        opset_version=18,
         dynamo=False,
         external_data=False,
         dynamic_axes=dynamic_axes,
