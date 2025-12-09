@@ -246,6 +246,28 @@ def decode(
     return x1y1x2y2
 
 
+def decode_xywh(
+    loc: torch.Tensor,
+    priors: torch.Tensor,
+    variances: Union[List[float], Tuple[float, float]],
+) -> torch.Tensor:
+    """Decodes locations from predictions using priors to undo the encoding we did for offset regression at train time.
+
+    Args:
+        loc: location predictions for loc layers,
+            Shape: [num_priors, 4]
+        priors: Prior boxes in center-offset form.
+            Shape: [num_priors, 4].
+        variances: Variances of priorboxes
+    Return:
+        decoded bounding box predictions
+    """
+    xy = priors[:, :2] + loc[:, :2] * variances[0] * priors[:, 2:]
+    wh = priors[:, 2:] * torch.exp(loc[:, 2:] * variances[1])
+    xywh = torch.cat((xy, wh), 1)
+    return xywh
+
+
 def decode_landm(
     pre: torch.Tensor,
     priors: torch.Tensor,

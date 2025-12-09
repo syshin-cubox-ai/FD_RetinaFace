@@ -11,7 +11,7 @@ from torch import Tensor
 from data import cfg_mnet, cfg_re50
 from layers.functions.prior_box import priorbox
 from models.retinaface import RetinaFace
-from utils.box_utils import decode, decode_landm
+from utils.box_utils import decode_landm, decode_xywh
 
 
 class RetinaFaceWrapper(nn.Module):
@@ -46,7 +46,7 @@ class RetinaFaceWrapper(nn.Module):
         loc, conf, landm = loc.squeeze(0), conf.squeeze(0), landm.squeeze(0)
 
         # Decode
-        boxes = decode(loc, self.priors, self.cfg["variance"])
+        boxes = decode_xywh(loc, self.priors, self.cfg["variance"])
         boxes = boxes * self.scale
         scores = conf[:, 1]
         landmarks = decode_landm(landm, self.priors, self.cfg["variance"])
@@ -96,6 +96,8 @@ def convert_onnx(
         input_names=input_names,
         output_names=output_names,
         opset_version=opset,
+        dynamo=True,
+        external_data=False,
         dynamic_axes=dynamic_axes,
     )
 
