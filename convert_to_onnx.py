@@ -54,12 +54,17 @@ class RetinaFaceWrapper(nn.Module):
 
 def convert_onnx(
     model: nn.Module,
-    img: Tensor,
+    img_path: str | Path,
     output_path: str | Path,
     dynamic=False,
 ):
     model.eval()
     output_path = Path(output_path)
+
+    img = cv2.imread(str(img_path))
+    assert img is not None
+    img = cv2.dnn.blobFromImage(img, 1, img.shape[:2][::-1], (104, 117, 123))
+    img = torch.from_numpy(img)
 
     # Define input and output names
     input_names = ["image"]
@@ -102,12 +107,8 @@ def convert_onnx(
 
 
 if __name__ == "__main__":
-    img = cv2.imread("curve/debug.jpg")
-    assert img is not None
-    img = cv2.dnn.blobFromImage(img, 1, img.shape[:2][::-1], (104, 117, 123))
-    img = torch.from_numpy(img)
-
-    model = RetinaFaceWrapper(cfg_re50, img.shape[2])
-    convert_onnx(model, img, "onnx_files/retinaface_resnet50.onnx")
-    model = RetinaFaceWrapper(cfg_mnet, img.shape[2])
-    convert_onnx(model, img, "onnx_files/retinaface_mobilenet025.onnx")
+    model = RetinaFaceWrapper(cfg_re50, 640)
+    convert_onnx(model, "curve/debug.jpg", "onnx_files/retinaface_resnet50.onnx")
+    print()
+    model = RetinaFaceWrapper(cfg_mnet, 640)
+    convert_onnx(model, "curve/debug.jpg", "onnx_files/retinaface_mobilenet025.onnx")
