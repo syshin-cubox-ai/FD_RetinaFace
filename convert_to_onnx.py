@@ -38,13 +38,10 @@ class RetinaFaceWrapper(nn.Module):
             image_size=(img_size, img_size),
         )
         self.scale = img_size
-        self.conf_thres = 0.9
-        self.iou_thres = 0.5
 
     def forward(self, x: Tensor) -> Tensor:
         loc, conf, landm = self.model(x)
 
-        # Decode
         boxes = batched_decode_xywh(loc, self.priors, self.cfg["variance"])
         boxes = boxes * self.scale
         scores = conf[..., 1:2]
