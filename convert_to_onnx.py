@@ -103,7 +103,7 @@ def convert_onnx(
         np.testing.assert_allclose(torch_out, onnx_out, rtol=1e-3, atol=1e-4)
     except AssertionError as e:
         print(e)
-    print(f"Successfully export ONNX model: {output_path}")
+    print(f"Successfully export: {output_path}")
 
 
 if __name__ == "__main__":
