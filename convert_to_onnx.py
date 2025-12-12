@@ -95,7 +95,7 @@ def convert_onnx(
     # Compare output with torch model and ONNX model
     torch_out = model(img).detach().numpy()
     session = onnxruntime.InferenceSession(
-        output_path, providers=["CUDAExecutionProvider"]
+        output_path, providers=["CPUExecutionProvider"]
     )
     onnx_out = session.run(None, {input_names[0]: img.numpy()})[0]
     try:
