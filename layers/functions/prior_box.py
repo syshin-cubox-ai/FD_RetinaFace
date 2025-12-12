@@ -1,21 +1,21 @@
-from itertools import product as product
-from math import ceil
-from typing import List, Tuple
+import math
+from itertools import product
 
 import torch
 
 
 def priorbox(
-    min_sizes: List[List[int]],
-    steps: List[int],
+    min_sizes: list[list[int]],
+    steps: list[int],
     clip: bool,
-    image_size: Tuple[int, int],
+    image_size: tuple[int, int],
 ) -> torch.Tensor:
     feature_maps = [
-        [ceil(image_size[0] / step), ceil(image_size[1] / step)] for step in steps
+        [math.ceil(image_size[0] / step), math.ceil(image_size[1] / step)]
+        for step in steps
     ]
 
-    anchors: List[float] = []
+    anchors: list[float] = []
     for k, f in enumerate(feature_maps):
         t_min_sizes = min_sizes[k]
         for i, j in product(range(f[0]), range(f[1])):
@@ -42,7 +42,7 @@ class PriorBox(object):
         self.clip = cfg["clip"]
         self.image_size = image_size
         self.feature_maps = [
-            [ceil(self.image_size[0] / step), ceil(self.image_size[1] / step)]
+            [math.ceil(self.image_size[0] / step), math.ceil(self.image_size[1] / step)]
             for step in self.steps
         ]
         self.name = "s"

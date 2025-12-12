@@ -1,9 +1,8 @@
-from typing import Tuple
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
+from torch import Tensor
 from torchvision.models import ResNet50_Weights, _utils
 
 from models.net import FPN, SSH, MobileNetV1
@@ -16,7 +15,7 @@ class ClassHead(nn.Module):
             in_channels, num_anchors * 2, kernel_size=(1, 1), stride=(1, 1), padding=0
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         out = self.conv1x1(x)
         out = out.permute(0, 2, 3, 1).contiguous()
         return out.view(out.shape[0], -1, 2)
@@ -29,7 +28,7 @@ class BboxHead(nn.Module):
             in_channels, num_anchors * 4, kernel_size=(1, 1), stride=(1, 1), padding=0
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         out = self.conv1x1(x)
         out = out.permute(0, 2, 3, 1).contiguous()
         return out.view(out.shape[0], -1, 4)
@@ -42,7 +41,7 @@ class LandmarkHead(nn.Module):
             in_channels, num_anchors * 10, kernel_size=(1, 1), stride=1, padding=0
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         out = self.conv1x1(x)
         out = out.permute(0, 2, 3, 1).contiguous()
         return out.view(out.shape[0], -1, 10)
@@ -121,9 +120,7 @@ class RetinaFace(nn.Module):
             landmarkhead.append(LandmarkHead(in_channels, anchor_num))
         return landmarkhead
 
-    def forward(
-        self, inputs: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, inputs: Tensor) -> tuple[Tensor, Tensor, Tensor]:
         out = self.body(inputs)
 
         # FPN

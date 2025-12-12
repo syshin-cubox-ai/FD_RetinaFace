@@ -1,8 +1,7 @@
-from typing import Dict, List
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch import Tensor
 
 
 def conv_bn(inp: int, oup: int, stride: int = 1, leaky: float = 0) -> nn.Sequential:
@@ -60,7 +59,7 @@ class SSH(nn.Module):
         )
         self.conv7x7_3 = conv_bn_no_relu(out_channel // 4, out_channel // 4, stride=1)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         conv3X3 = self.conv3X3(x)
 
         conv5X5_1 = self.conv5X5_1(x)
@@ -75,7 +74,7 @@ class SSH(nn.Module):
 
 
 class FPN(nn.Module):
-    def __init__(self, in_channels_list: List[int], out_channels: int) -> None:
+    def __init__(self, in_channels_list: list[int], out_channels: int) -> None:
         super().__init__()
         leaky = 0.0
         if out_channels <= 64:
@@ -94,7 +93,7 @@ class FPN(nn.Module):
         self.merge1 = conv_bn(out_channels, out_channels, leaky=leaky)
         self.merge2 = conv_bn(out_channels, out_channels, leaky=leaky)
 
-    def forward(self, x: Dict[str, torch.Tensor]) -> List[torch.Tensor]:
+    def forward(self, x: dict[str, Tensor]) -> list[Tensor]:
         x = list(x.values())
 
         output1 = self.output1(x[0])
@@ -148,7 +147,6 @@ class MobileNetV1(nn.Module):
         x = self.stage2(x)
         x = self.stage3(x)
         x = self.avg(x)
-        # x = self.model(x)
         x = x.view(-1, 256)
         x = self.fc(x)
         return x
