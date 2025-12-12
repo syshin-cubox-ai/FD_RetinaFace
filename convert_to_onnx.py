@@ -48,23 +48,11 @@ class RetinaFaceWrapper(nn.Module):
         # Decode
         boxes = decode_xywh(loc, self.priors, self.cfg["variance"])
         boxes = boxes * self.scale
-        scores = conf[:, 1]
+        scores = conf[:, 1:2]
         landmarks = decode_landm(landm, self.priors, self.cfg["variance"])
         landmarks = landmarks * self.scale
 
-        # # Ignore low scores
-        # keep = torch.nonzero(scores > self.conf_thres).squeeze(1)
-        # boxes = boxes[keep]
-        # scores = scores[keep]
-        # landmarks = landmarks[keep]
-
-        # # NMS
-        # keep = torchvision.ops.nms(boxes, scores, self.iou_thres)
-        # boxes = boxes[keep]
-        # scores = scores[keep]
-        # landmarks = landmarks[keep]
-
-        out = torch.cat((boxes, scores.unsqueeze(1), landmarks), 1)
+        out = torch.cat((boxes, scores, landmarks), 1)
         return out
 
 
