@@ -11,7 +11,7 @@ from torch import Tensor
 from data import cfg_mnet, cfg_re50
 from layers.functions.prior_box import priorbox
 from models.retinaface import RetinaFace
-from utils.box_utils import decode_landm, decode_xywh
+from utils.box_utils import batched_decode_landm, batched_decode_xywh
 
 
 class RetinaFaceWrapper(nn.Module):
@@ -43,16 +43,15 @@ class RetinaFaceWrapper(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         loc, conf, landm = self.model(x)
-        loc, conf, landm = loc.squeeze(0), conf.squeeze(0), landm.squeeze(0)
 
         # Decode
-        boxes = decode_xywh(loc, self.priors, self.cfg["variance"])
+        boxes = batched_decode_xywh(loc, self.priors, self.cfg["variance"])
         boxes = boxes * self.scale
-        scores = conf[:, 1:2]
-        landmarks = decode_landm(landm, self.priors, self.cfg["variance"])
+        scores = conf[..., 1:2]
+        landmarks = batched_decode_landm(landm, self.priors, self.cfg["variance"])
         landmarks = landmarks * self.scale
 
-        out = torch.cat((boxes, scores, landmarks), 1)
+        out = torch.cat((boxes, scores, landmarks), 2)
         return out
 
 
