@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -71,10 +71,11 @@ class RetinaFaceWrapper(nn.Module):
 def convert_onnx(
     model: nn.Module,
     img: Tensor,
-    output_path: str,
+    output_path: str | Path,
     dynamic=False,
 ):
     model.eval()
+    output_path = Path(output_path)
 
     # Define input and output names
     input_names = ["image"]
@@ -87,7 +88,7 @@ def convert_onnx(
         dynamic_axes = None
 
     # Export model into ONNX format
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     torch.onnx.export(
         model,
         (img,),
@@ -101,7 +102,7 @@ def convert_onnx(
     )
 
     # Simplify ONNX model
-    onnxslim.slim(output_path)
+    onnxslim.slim(str(output_path), output_model=str(output_path))
 
     # Compare output with torch model and ONNX model
     torch_out = model(img).detach().numpy()
@@ -117,16 +118,16 @@ def convert_onnx(
             "Do you want to ignore the error and proceed with the export ([y]/n)? "
         )
         if stdin == "n":
-            os.remove(output_path)
+            output_path.unlink()
             exit(1)
     print(f"Successfully export ONNX model: {output_path}")
 
 
 if __name__ == "__main__":
-    img = cv2.imread("curve/debug.jpg").astype(np.float32)
-    img -= (104, 117, 123)
-    img = img.transpose(2, 0, 1)
-    img = torch.from_numpy(img).unsqueeze(0)
+    img = cv2.imread("curve/debug.jpg")
+    assert img is not None
+    img = cv2.dnn.blobFromImage(img, 1, img.shape[:2][::-1], (104, 117, 123))
+    img = torch.from_numpy(img)
 
     model = RetinaFaceWrapper(cfg_re50, img.shape[2])
     convert_onnx(model, img, "onnx_files/retinaface_resnet50.onnx")
